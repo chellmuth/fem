@@ -54,6 +54,16 @@ def render():
 class FEM(object):
     def __init__(self, dim):
         self.dim = dim
+        self.h = 1 / (dim + 1)
+
+    def N(self, t):
+        row = t // (self.dim + 2)
+        col = t % (self.dim + 2)
+
+        print(row)
+        print(self.h)
+        print(row * self.h)
+        return (col * self.h, row * self.h)
 
     def T(self, alpha, n):
         row = (n // 2) // (self.dim + 1)
@@ -78,6 +88,10 @@ class FEM(object):
             elif alpha == 3:
                 return UR
 
+        raise Exception
+
+
+import pytest
 
 def test_T():
     fem = FEM(2)
@@ -92,6 +106,12 @@ def test_T():
 
     assert fem.T(3, 15) == 14
 
+def test_N():
+    fem = FEM(2)
+
+    assert fem.N(fem.T(1, 0)) == (0, 0)
+    assert fem.N(fem.T(2, 0)) == (pytest.approx(1/3), pytest.approx(1/3))
+    assert fem.N(fem.T(3, 11)) == (pytest.approx(1), pytest.approx(2/3))
 
 if __name__ == "__main__":
     render()
