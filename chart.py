@@ -51,5 +51,47 @@ def render():
 
     plt.show()
 
+class FEM(object):
+    def __init__(self, dim):
+        self.dim = dim
+
+    def T(self, alpha, n):
+        row = (n // 2) // (self.dim + 1)
+        col = (n // 2) % (self.dim + 1)
+
+        LL = (self.dim + 2) * row + col
+        LR = LL + 1
+        UL = LL + (self.dim + 2)
+        UR = UL + 1
+
+        if alpha == 1:
+            return LL
+
+        if n % 2 == 0:
+            if alpha == 2:
+                return UR
+            elif alpha == 3:
+                return UL
+        else:
+            if alpha == 2:
+                return LR
+            elif alpha == 3:
+                return UR
+
+
+def test_T():
+    fem = FEM(2)
+
+    assert fem.T(1, 0) == 0
+    assert fem.T(2, 0) == 5
+    assert fem.T(3, 0) == 4
+
+    assert fem.T(1, 1) == 0
+    assert fem.T(2, 1) == 1
+    assert fem.T(3, 1) == 5
+
+    assert fem.T(3, 15) == 14
+
+
 if __name__ == "__main__":
     render()
