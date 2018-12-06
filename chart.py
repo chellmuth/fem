@@ -1,7 +1,9 @@
 from mpl_toolkits.mplot3d import Axes3D
+from sympy import Symbol, symbols
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 import numpy as np
+import sympy
 
 def build_triangulation(size):
     h = 1 / (size + 1)
@@ -51,6 +53,25 @@ def render():
 
     plt.show()
 
+def build_linear_basis_function(p1, ps):
+    p2, p3 = ps
+
+    A = sympy.Matrix([
+        [ p1[0], p1[1], 1 ],
+        [ p2[0], p2[1], 1 ],
+        [ p3[0], p3[1], 1 ],
+    ])
+
+    b = sympy.Matrix(
+        3, 1,
+        [ 1, 0, 0 ],
+    )
+
+    a, b, c = tuple(A.LUsolve(b))
+    x, y = symbols("x y")
+
+    return a*x + b*y + c
+
 class FEM(object):
     def __init__(self, dim):
         self.dim = dim
@@ -60,10 +81,8 @@ class FEM(object):
         row = t // (self.dim + 2)
         col = t % (self.dim + 2)
 
-        print(row)
-        print(self.h)
-        print(row * self.h)
-        return (col * self.h, row * self.h)
+        h = Symbol("h")
+        return (col * h, row * h)
 
     def T(self, alpha, n):
         row = (n // 2) // (self.dim + 1)
@@ -90,6 +109,24 @@ class FEM(object):
 
         raise Exception
 
+    def psi(self, alpha, n):
+        t1 = self.T(1, n)
+        t2 = self.T(2, n)
+        t3 = self.T(3, n)
+
+        n1 = self.N(t1)
+        n2 = self.N(t2)
+        n3 = self.N(t3)
+
+        if alpha == 1:
+            p, ps = n1, [n2, n3]
+        elif alpha == 2:
+            p, ps = n2, [n1, n3]
+        elif alpha == 3:
+            p, ps = n3, [n1, n2]
+
+        psi = build_linear_basis_function(p, ps)
+        return psi
 
 import pytest
 
@@ -109,9 +146,32 @@ def test_T():
 def test_N():
     fem = FEM(2)
 
+    h = Symbol("h")
+
     assert fem.N(fem.T(1, 0)) == (0, 0)
-    assert fem.N(fem.T(2, 0)) == (pytest.approx(1/3), pytest.approx(1/3))
-    assert fem.N(fem.T(3, 11)) == (pytest.approx(1), pytest.approx(2/3))
+    assert fem.N(fem.T(2, 0)) == (h, h)
+    assert fem.N(fem.T(3, 11)) == (3*h, 2*h)
+
+def test_build_linear_basis_function():
+    p1 = [0, 0]
+
+    h, x = symbols("h x")
+    p2 = [h, 0]
+    p3 = [h, h]
+
+    z = build_linear_basis_function(p1, [p2, p3])
+    assert z == 1 - x/h
+
+def test_psi():
+    fem = FEM(2)
+
+    h, x, y = symbols("h x y")
+
+    psi = fem.psi(1, 8)
+    assert psi == 2 - y/h
+
+    psi = fem.psi(2, 8)
+    assert psi == -1 + x/h
 
 if __name__ == "__main__":
     render()
