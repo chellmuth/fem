@@ -1,75 +1,10 @@
 from mpl_toolkits.mplot3d import Axes3D
-from sympy import Symbol, symbols
-import matplotlib.pyplot as plt
-import matplotlib.tri as tri
+from sympy import symbols
 import numpy as np
 import sympy
 
-def build_triangulation(fem):
-    x = []
-    y = []
-
-    triangles = []
-    for row in range(fem.dim + 2):
-        for col in range(fem.dim + 2):
-            x.append(col * fem.h)
-            y.append(row * fem.h)
-
-    for n in range(2 * (fem.dim + 1) ** 2):
-        triangles.append(
-            [
-                fem.T(1, n),
-                fem.T(2, n),
-                fem.T(3, n),
-            ]
-        )
-
-    triangulation = tri.Triangulation(x, y, triangles)
-    return triangulation
-
-def build_z(fem, etas):
-    z = []
-
-    # f = -8*pi*sin(2*pi*x)*sin(2*pi*y)
-
-    # for row in range(fem.dim + 2):
-    #     for col in range(fem.dim + 2):
-    #         value = f.subs(
-    #             {
-    #                 "x": fem.h*col,
-    #                 "y": fem.h*row
-    #             }
-    #         )
-    #         z.append(float(value))
-
-    internals = internal_nodes(fem.dim)
-    for node in range((fem.dim + 2) ** 2):
-        eta = 0
-        if node in internals:
-            eta = etas[internals.index(node)][0]
-        z.append(eta)
-
-    return z
-
-
-def build_linear_basis_function(p1, ps):
-    p2, p3 = ps
-
-    A = sympy.Matrix([
-        [ p1[0], p1[1], 1 ],
-        [ p2[0], p2[1], 1 ],
-        [ p3[0], p3[1], 1 ],
-    ])
-
-    b = sympy.Matrix(
-        3, 1,
-        [ 1, 0, 0 ],
-    )
-
-    a, b, c = tuple(A.LUsolve(b))
-    x, y = symbols("x y")
-
-    return a*x + b*y + c
+import render
+from helper import internal_nodes, build_linear_basis_function
 
 class FEM(object):
     def __init__(self, dim):
@@ -80,7 +15,7 @@ class FEM(object):
         row = t // (self.dim + 2)
         col = t % (self.dim + 2)
 
-        h = Symbol("h")
+        h = symbols("h")
         return ((col * h).subs({"h": self.h}), (row * h).subs({"h": self.h}))
 
     def T(self, alpha, n):
@@ -321,41 +256,12 @@ def build_internal_b(b, dim):
         b_internal[row][0] = b[nodes[row]][0]
     return b_internal
 
-def internal_nodes(dim):
-    indices = []
-
-    original_dim = dim + 2
-    for row in range(dim):
-        for col in range(dim):
-            indices.append(
-                original_dim
-                + original_dim * row
-                + 1
-                + col
-            )
-
-    return indices
-
 def test_internal_nodes():
     assert internal_nodes(1) == [4]
     assert internal_nodes(2) == [5,6,9,10]
     assert internal_nodes(3) == [6,7,8, 11, 12, 13, 16, 17, 18]
 
 
-def render(fem, etas):
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-
-    triangulation = build_triangulation(fem)
-    z = build_z(fem, etas)
-
-    ax.plot_trisurf(
-        triangulation,
-        z,
-        linewidth=0.2, antialiased=True
-    )
-
-    plt.show()
 
 from sympy import pi, cos, sin
 
@@ -403,4 +309,4 @@ if __name__ == "__main__":
         if w != 0:
             ws.append(w)
 
-    render(fem, etas)
+    render.render(fem, etas)
