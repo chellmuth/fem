@@ -1,4 +1,3 @@
-from mpl_toolkits.mplot3d import Axes3D
 from sympy import symbols, pi, sin
 import numpy as np
 import sympy
