@@ -139,10 +139,31 @@ class FEM(object):
         n2 = self.N(t2)
         n3 = self.N(t3)
 
+        x = symbols("x")
         if n % 2 == 0:
-            return ((n1[0], n2[0]), (n1[1], n2[1]))
+            return ((n1[0], n2[0]), (n1[1] + (x - n1[0]), n2[1]))
         else:
-            return ((n1[0], n2[0]), (n1[1], n3[1]))
+            return ((n1[0], n2[0]), (n1[1], n3[1] - (n2[0] - x)))
+
+def integrate(f, domain):
+    x, y = symbols("x y")
+    x_domain, y_domain = domain
+    result = sympy.integrate(
+        f,
+        (x, x_domain[0], x_domain[1]),
+        (y, y_domain[0], y_domain[1])
+    )
+    return result
+
+def build_elemental_b(fem, n, f):
+    b = [ 0, 0, 0 ]
+    for alpha in range(3):
+        b[alpha] = integrate(
+            fem.psi(alpha + 1, n) * f,
+            fem.domain(n)
+        )
+    return b
+
 
 import pytest
 
@@ -191,15 +212,24 @@ def test_psi():
 
 def test_domain():
     fem = FEM(2)
-    h = symbols("h")
+    h, x = symbols("h x")
 
     xs, ys = fem.domain(10)
     assert xs == (2*h, 3*h)
-    assert ys == (h, 2*h)
+    assert ys == (h + (x - 2*h), 2*h)
 
     xs, ys = fem.domain(13)
     assert xs == (0, h)
-    assert ys == (2*h, 3*h)
+    assert ys == (2*h, 3*h - (h - x))
+
+def test_elemental_b():
+    fem = FEM(2)
+    h, x = symbols("h x")
+
+    f = x
+
+    b = build_elemental_b(fem, 0, f)
+    # assert b == [ h**2 / 2, h**2 / 2, -h**2 / 2 ]
 
 if __name__ == "__main__":
     render()
