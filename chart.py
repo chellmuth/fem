@@ -1,5 +1,5 @@
 from mpl_toolkits.mplot3d import Axes3D
-from sympy import symbols
+from sympy import symbols, pi, sin
 import numpy as np
 import sympy
 
@@ -263,14 +263,16 @@ def test_internal_nodes():
 
 
 
-from sympy import pi, cos, sin
 
 if __name__ == "__main__":
-    dim = 1
+    dim = 10
     node_count = (dim + 2) ** 2
     triangle_count = 2 * (dim + 1) ** 2
 
     fem = FEM(dim)
+
+    render.render_u(FEM(20))
+
     x, y = symbols("x y")
 
     f = -8*pi*sin(2*pi*x)*sin(2*pi*y)
