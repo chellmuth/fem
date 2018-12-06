@@ -299,7 +299,7 @@ if __name__ == "__main__":
 
     fem = FEM(dim)
 
-    # render.render_u(FEM(20))
+    render.render_u(FEM(20))
 
     x, y = symbols("x y")
 
@@ -322,14 +322,6 @@ if __name__ == "__main__":
                 A[fem.T(alpha+1, n)][fem.T(beta+1, n)] += A_n[n][alpha][beta]
             b[fem.T(alpha+1, n)][0] += b_n[n][alpha]
 
-    etas = np.linalg.solve(A, b)
-
-    ws = []
-    for n in range(triangle_count):
-        w = fem.w(n, etas)
-        if w != 0:
-            ws.append(w)
-
     A_internal = build_internal_A(A, dim)
     b_internal = build_internal_b(b, dim)
 
@@ -341,5 +333,17 @@ if __name__ == "__main__":
         if w != 0:
             ws.append(w)
 
-    # render.render(fem, etas)
     render.render_internal(fem, etas_internal)
+
+    # Global render
+    if False:
+        etas = np.linalg.solve(A, b)
+
+        ws = []
+        for n in range(triangle_count):
+            w = fem.w(n, etas)
+            if w != 0:
+                ws.append(w)
+
+        render.render(fem, etas)
+
