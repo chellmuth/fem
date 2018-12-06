@@ -5,7 +5,7 @@ import matplotlib.tri as tri
 import numpy as np
 import sympy
 
-def build_triangulation(fem, etas):
+def build_triangulation(fem):
     x = []
     y = []
 
@@ -30,13 +30,26 @@ def build_triangulation(fem, etas):
 def build_z(fem, etas):
     z = []
 
-    internals = internal_nodes(fem.dim)
-    for node in range((fem.dim + 2) ** 2):
-        eta = 0
-        if node in internals:
-            eta = etas[internals.index(node)][0]
-        z.append(eta)
+    f = -8*pi*sin(2*pi*x)*sin(2*pi*y)
 
+    for row in range(fem.dim + 2):
+        for col in range(fem.dim + 2):
+            value = f.subs(
+                {
+                    "x": fem.h*col,
+                    "y": fem.h*row
+                }
+            )
+            z.append(float(value))
+
+    # internals = internal_nodes(fem.dim)
+    # for node in range((fem.dim + 2) ** 2):
+    #     eta = 0
+    #     if node in internals:
+    #         eta = etas[internals.index(node)][0]
+    #     z.append(eta)
+
+    print(z)
     return z
 
 
@@ -333,11 +346,12 @@ def render(fem, etas):
     fig = plt.figure()
     ax = fig.gca(projection='3d')
 
-    size = 3
-    z = [ 1 for _ in range((fem.dim+2)**2) ]
+    triangulation = build_triangulation(fem)
+    z = build_z(fem, etas)
+
     ax.plot_trisurf(
-        build_triangulation(fem, etas),
-        build_z(fem, etas),
+        triangulation,
+        z,
         linewidth=0.2, antialiased=True
     )
 
@@ -353,34 +367,36 @@ if __name__ == "__main__":
     fem = FEM(dim)
     x, y = symbols("x y")
 
-    f = sin(2*pi*x)*cos(2*pi*y)
+    # f = -8*pi*sin(2*pi*x)*sin(2*pi*y)
 
-    A_n = []
-    b_n = []
-    for n in range(triangle_count):
-        A_n.append(build_element_stiffness(fem, n))
-        b_n.append(build_elemental_b(fem, n, f))
+    # A_n = []
+    # b_n = []
+    # for n in range(triangle_count):
+    #     print(n)
+    #     A_n.append(build_element_stiffness(fem, n))
+    #     b_n.append(build_elemental_b(fem, n, f))
 
-    A = np.zeros((node_count, node_count))
-    b = np.zeros((node_count, 1))
+    # A = np.zeros((node_count, node_count))
+    # b = np.zeros((node_count, 1))
 
-    for n in range(triangle_count):
-        for alpha in range(3):
-            for beta in range(3):
-                A[fem.T(alpha+1, n)][fem.T(beta+1, n)] += A_n[n][alpha][beta]
-            b[fem.T(alpha+1, n)][0] += b_n[n][alpha]
+    # for n in range(triangle_count):
+    #     print(n)
+    #     for alpha in range(3):
+    #         for beta in range(3):
+    #             A[fem.T(alpha+1, n)][fem.T(beta+1, n)] += A_n[n][alpha][beta]
+    #         b[fem.T(alpha+1, n)][0] += b_n[n][alpha]
 
-    etas = np.linalg.solve(A, b)
+    # etas = np.linalg.solve(A, b)
 
-    A_internal = build_internal_A(A, dim)
-    b_internal = build_internal_b(b, dim)
+    # A_internal = build_internal_A(A, dim)
+    # b_internal = build_internal_b(b, dim)
 
-    etas_internal = np.linalg.solve(A_internal, b_internal)
+    # etas_internal = np.linalg.solve(A_internal, b_internal)
 
-    ws = []
-    for n in range(triangle_count):
-        w = fem.w(n, etas)
-        if w != 0:
-            ws.append(w)
+    # ws = []
+    # for n in range(triangle_count):
+    #     w = fem.w(n, etas)
+    #     if w != 0:
+    #         ws.append(w)
 
-    render(fem, etas)
+    render(fem, [])
