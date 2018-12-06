@@ -275,10 +275,6 @@ if __name__ == "__main__":
 
     f = -8*pi*sin(2*pi*x)*sin(2*pi*y)
 
-    # print("HAPPY!")
-    # print(build_elemental_b(fem, 0, f))
-    # exit()
-
     A_n = []
     b_n = []
     for n in range(triangle_count):
