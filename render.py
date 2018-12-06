@@ -52,11 +52,11 @@ def build_z_internal(fem, etas):
 def build_u_z(fem):
     z = []
 
-    f = -8*pi*sin(2*pi*x)*sin(2*pi*y)
+    u = sin(2*pi*x)*sin(2*pi*y)
 
     for row in range(fem.dim + 2):
         for col in range(fem.dim + 2):
-            value = f.subs(
+            value = u.subs(
                 {
                     "x": fem.h*col,
                     "y": fem.h*row
