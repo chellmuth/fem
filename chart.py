@@ -11,13 +11,14 @@ class FEM(object):
         self.dim = dim
         self.h = 1 / (dim + 1)
 
+    # return the world coordinates of global node t
     def N(self, t):
         row = t // (self.dim + 2)
         col = t % (self.dim + 2)
 
-        h = symbols("h")
-        return ((col * h).subs({"h": self.h}), (row * h).subs({"h": self.h}))
+        return ((col * self.h), (row * self.h))
 
+    # return the node index for a vertex alpha in triangle n
     def T(self, alpha, n):
         row = (n // 2) // (self.dim + 1)
         col = (n // 2) % (self.dim + 1)
@@ -174,7 +175,7 @@ def build_elemental_b(fem, n, f):
     b = [ 0, 0, 0 ]
     for alpha in range(3):
         b[alpha] = integrate(
-            (fem.psi(alpha + 1, n).subs({"h": fem.h}) * f),
+            (fem.psi(alpha + 1, n) * f),
             fem.domain(n)
         )
 
@@ -195,7 +196,7 @@ def build_element_stiffness(fem, n):
                         alpha_gradient[1] * beta_gradient[1]
 
             A[alpha][beta] = integrate(
-                integrand.subs({"h": fem.h}),
+                integrand,
                 fem.domain(n)
             )
 
@@ -290,8 +291,6 @@ def test_internal_nodes():
     assert internal_nodes(3) == [6,7,8, 11, 12, 13, 16, 17, 18]
 
 
-
-
 if __name__ == "__main__":
     dim = 3
     node_count = (dim + 2) ** 2
@@ -299,7 +298,7 @@ if __name__ == "__main__":
 
     fem = FEM(dim)
 
-    render.render_u(FEM(20))
+    # render.render_u(FEM(20))
 
     x, y = symbols("x y")
 
@@ -326,6 +325,7 @@ if __name__ == "__main__":
     b_internal = build_internal_b(b, dim)
 
     etas_internal = np.linalg.solve(A_internal, b_internal)
+    print (etas_internal)
 
     ws = []
     for n in range(triangle_count):
