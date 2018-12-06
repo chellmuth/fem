@@ -254,14 +254,51 @@ def test_elemental_b():
     b = build_elemental_b(fem, 0, f)
     # assert b == [ h**2 / 2, h**2 / 2, -h**2 / 2 ]
 
+def build_internal_A(A, dim):
+    A_internal = np.zeros((dim**2, dim**2))
+
+    nodes = internal_nodes(dim)
+    for row in range(dim**2):
+        for col in range(dim**2):
+            A_internal[row][col] = A[nodes[row]][nodes[col]]
+    return A_internal
+
+def build_internal_b(b, dim):
+    b_internal = np.zeros((dim**2, 1))
+
+    nodes = internal_nodes(dim)
+    for row in range(dim**2):
+        b_internal[row][0] = b[nodes[row]][0]
+    return b_internal
+
+def internal_nodes(dim):
+    indices = []
+
+    original_dim = dim + 2
+    for row in range(dim):
+        for col in range(dim):
+            indices.append(
+                original_dim
+                + original_dim * row
+                + 1
+                + col
+            )
+
+    return indices
+
+def test_internal_nodes():
+    assert internal_nodes(1) == [4]
+    assert internal_nodes(2) == [5,6,9,10]
+    assert internal_nodes(3) == [6,7,8, 11, 12, 13, 16, 17, 18]
+
 if __name__ == "__main__":
-    dim = 1
+    dim = 3
     node_count = (dim + 2) ** 2
     triangle_count = 2 * (dim + 1) ** 2
 
     fem = FEM(dim)
     x, h = symbols("x h")
-    f = sympy.cos(x) + 1
+    f = 10
 
     A_n = []
     b_n = []
@@ -278,9 +315,16 @@ if __name__ == "__main__":
                 A[fem.T(alpha+1, n)][fem.T(beta+1, n)] += A_n[n][alpha][beta]
             b[fem.T(alpha+1, n)][0] += b_n[n][alpha].subs(h, fem.h)
 
-    print (A)
-    print (b)
+    # print (A)
+    # print (b)
     etas = np.linalg.solve(A, b)
-    print(etas)
+    # print(etas)
 
+    A_internal = build_internal_A(A, dim)
+    b_internal = build_internal_b(b, dim)
+    print(A_internal)
+    print(b_internal)
+
+    etas_internal = np.linalg.solve(A_internal, b_internal)
+    print(etas_internal)
     # render()
