@@ -85,6 +85,34 @@ class FEM(object):
             return ((n1[0], n2[0]), (n1[1], n3[1] - (n2[0] - x)))
 
     def w(self, n, etas):
+        t1 = self.T(1, n)
+        t2 = self.T(2, n)
+        t3 = self.T(3, n)
+
+        eta1 = etas[t1][0]
+        eta2 = etas[t2][0]
+        eta3 = etas[t3][0]
+
+        n1 = self.N(t1)
+        n2 = self.N(t2)
+        n3 = self.N(t3)
+
+        x, y = symbols("x y")
+
+        if n % 2 == 0:
+            domain = ((x>= n1[0]) & (x<=n2[0]) & ((y-n1[1])>=(x-n1[0])) & (y<=n2[1]))
+        else:
+            domain = ((x>= n1[0]) & (x<=n2[0]) & ((y-n1[1])<=(x-n1[0])) & (y>=n2[1]))
+
+        return sympy.Piecewise(
+            (
+                (self.psi(1, n) * eta1) + (self.psi(2, n) * eta2) + (self.psi(3, n) * eta3),
+                domain
+            ),
+            (0, True)
+        )
+
+    def w_internal(self, n, etas):
         internals = internal_nodes(self.dim)
 
         t1 = self.T(1, n)
@@ -265,13 +293,13 @@ def test_internal_nodes():
 
 
 if __name__ == "__main__":
-    dim = 10
+    dim = 3
     node_count = (dim + 2) ** 2
     triangle_count = 2 * (dim + 1) ** 2
 
     fem = FEM(dim)
 
-    render.render_u(FEM(20))
+    # render.render_u(FEM(20))
 
     x, y = symbols("x y")
 
@@ -296,6 +324,12 @@ if __name__ == "__main__":
 
     etas = np.linalg.solve(A, b)
 
+    ws = []
+    for n in range(triangle_count):
+        w = fem.w(n, etas)
+        if w != 0:
+            ws.append(w)
+
     A_internal = build_internal_A(A, dim)
     b_internal = build_internal_b(b, dim)
 
@@ -303,8 +337,9 @@ if __name__ == "__main__":
 
     ws = []
     for n in range(triangle_count):
-        w = fem.w(n, etas)
+        w = fem.w_internal(n, etas_internal)
         if w != 0:
             ws.append(w)
 
-    render.render(fem, etas)
+    # render.render(fem, etas)
+    render.render_internal(fem, etas_internal)

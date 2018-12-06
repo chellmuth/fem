@@ -32,6 +32,16 @@ def build_z(fem, etas):
 
     internals = internal_nodes(fem.dim)
     for node in range((fem.dim + 2) ** 2):
+        eta = etas[node][0]
+        z.append(eta)
+
+    return z
+
+def build_z_internal(fem, etas):
+    z = []
+
+    internals = internal_nodes(fem.dim)
+    for node in range((fem.dim + 2) ** 2):
         eta = 0
         if node in internals:
             eta = etas[internals.index(node)][0]
@@ -62,6 +72,21 @@ def render(fem, etas):
 
     triangulation = build_triangulation(fem)
     z = build_z(fem, etas)
+
+    ax.plot_trisurf(
+        triangulation,
+        z,
+        linewidth=0.2, antialiased=True
+    )
+
+    plt.show()
+
+def render_internal(fem, etas):
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+
+    triangulation = build_triangulation(fem)
+    z = build_z_internal(fem, etas)
 
     ax.plot_trisurf(
         triangulation,
