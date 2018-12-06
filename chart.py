@@ -160,14 +160,17 @@ def integrate(f, domain):
     y_low_converted = sympy.lambdify(x, y_low)
     y_high_converted = sympy.lambdify(x, y_high)
 
-    # result1 = sympy.integrate(
+    # result1 = float(sympy.integrate(
     #     f,
     #     (y, y_domain[0], y_domain[1]),
     #     (x, x_domain[0], x_domain[1]),
-    # )
+    # ))
 
-    ff = sympy.lambdify((x, y), f)
+    ff = sympy.lambdify((y, x), f)
     result2 = dblquad(ff, x_low, x_high, y_low_converted, y_high_converted)
+
+    # if abs(result2[0] - result1) > 0.01:
+    #     import pdb; pdb.set_trace()
 
     return result2[0]
 
