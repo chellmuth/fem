@@ -82,7 +82,7 @@ class FEM(object):
         col = t % (self.dim + 2)
 
         h = Symbol("h")
-        return (col * h, row * h)
+        return ((col * h).subs({"h": self.h}), (row * h).subs({"h": self.h}))
 
     def T(self, alpha, n):
         row = (n // 2) // (self.dim + 1)
@@ -150,23 +150,35 @@ class FEM(object):
         else:
             return ((n1[0], n2[0]), (n1[1], n3[1] - (n2[0] - x)))
 
+from scipy.integrate import dblquad
+
 def integrate(f, domain):
     x, y = symbols("x y")
     x_domain, y_domain = domain
-    result = sympy.integrate(
-        f,
-        (y, y_domain[0], y_domain[1]),
-        (x, x_domain[0], x_domain[1]),
-    )
-    return result
+    x_low, x_high = x_domain
+    y_low, y_high = y_domain
+
+    y_low_converted = sympy.lambdify(x, y_low)
+    y_high_converted = sympy.lambdify(x, y_high)
+
+    # result = sympy.integrate(
+    #     f,
+    #     (y, y_domain[0], y_domain[1]),
+    #     (x, x_domain[0], x_domain[1]),
+    # )
+
+    ff = sympy.lambdify((x, y), f)
+    result = dblquad(ff, x_low, x_high, y_low_converted, y_high_converted)
+    return result[0]
 
 def build_elemental_b(fem, n, f):
     b = [ 0, 0, 0 ]
     for alpha in range(3):
         b[alpha] = integrate(
-            fem.psi(alpha + 1, n) * f,
+            (fem.psi(alpha + 1, n).subs({"h": fem.h}) * f),
             fem.domain(n)
         )
+
     return b
 
 def build_element_stiffness(fem, n):
@@ -180,9 +192,11 @@ def build_element_stiffness(fem, n):
         for beta in range(3):
             alpha_gradient = fem.gradient_psi(alpha + 1, n)
             beta_gradient = fem.gradient_psi(beta + 1, n)
+            integrand = alpha_gradient[0] * beta_gradient[0] + \
+                        alpha_gradient[1] * beta_gradient[1]
+
             A[alpha][beta] = integrate(
-                alpha_gradient[0] * beta_gradient[0] + \
-                alpha_gradient[1] * beta_gradient[1],
+                integrand.subs({"h": fem.h}),
                 fem.domain(n)
             )
 
@@ -291,19 +305,23 @@ def test_internal_nodes():
     assert internal_nodes(2) == [5,6,9,10]
     assert internal_nodes(3) == [6,7,8, 11, 12, 13, 16, 17, 18]
 
+from sympy import pi, cos
+
 if __name__ == "__main__":
     dim = 3
     node_count = (dim + 2) ** 2
     triangle_count = 2 * (dim + 1) ** 2
 
     fem = FEM(dim)
-    x, h = symbols("x h")
+    x, y = symbols("x y")
     f = 10
+    f = 1/4 * (-cos(2 * pi * x) + 1) * (-cos(2 * pi * y) + 1)
 
     A_n = []
     b_n = []
     for n in range(triangle_count):
         A_n.append(build_element_stiffness(fem, n))
+        print("BUILDING ELEMENTAL " + str(n))
         b_n.append(build_elemental_b(fem, n, f))
 
     A = np.zeros((node_count, node_count))
@@ -313,7 +331,7 @@ if __name__ == "__main__":
         for alpha in range(3):
             for beta in range(3):
                 A[fem.T(alpha+1, n)][fem.T(beta+1, n)] += A_n[n][alpha][beta]
-            b[fem.T(alpha+1, n)][0] += b_n[n][alpha].subs(h, fem.h)
+            b[fem.T(alpha+1, n)][0] += b_n[n][alpha]
 
     # print (A)
     # print (b)
