@@ -30,26 +30,25 @@ def build_triangulation(fem):
 def build_z(fem, etas):
     z = []
 
-    f = -8*pi*sin(2*pi*x)*sin(2*pi*y)
+    # f = -8*pi*sin(2*pi*x)*sin(2*pi*y)
 
-    for row in range(fem.dim + 2):
-        for col in range(fem.dim + 2):
-            value = f.subs(
-                {
-                    "x": fem.h*col,
-                    "y": fem.h*row
-                }
-            )
-            z.append(float(value))
+    # for row in range(fem.dim + 2):
+    #     for col in range(fem.dim + 2):
+    #         value = f.subs(
+    #             {
+    #                 "x": fem.h*col,
+    #                 "y": fem.h*row
+    #             }
+    #         )
+    #         z.append(float(value))
 
-    # internals = internal_nodes(fem.dim)
-    # for node in range((fem.dim + 2) ** 2):
-    #     eta = 0
-    #     if node in internals:
-    #         eta = etas[internals.index(node)][0]
-    #     z.append(eta)
+    internals = internal_nodes(fem.dim)
+    for node in range((fem.dim + 2) ** 2):
+        eta = 0
+        if node in internals:
+            eta = etas[internals.index(node)][0]
+        z.append(eta)
 
-    print(z)
     return z
 
 
@@ -197,15 +196,16 @@ def integrate(f, domain):
     y_low_converted = sympy.lambdify(x, y_low)
     y_high_converted = sympy.lambdify(x, y_high)
 
-    # result = sympy.integrate(
+    # result1 = sympy.integrate(
     #     f,
     #     (y, y_domain[0], y_domain[1]),
     #     (x, x_domain[0], x_domain[1]),
     # )
 
     ff = sympy.lambdify((x, y), f)
-    result = dblquad(ff, x_low, x_high, y_low_converted, y_high_converted)
-    return result[0]
+    result2 = dblquad(ff, x_low, x_high, y_low_converted, y_high_converted)
+
+    return result2[0]
 
 def build_elemental_b(fem, n, f):
     b = [ 0, 0, 0 ]
@@ -360,43 +360,47 @@ def render(fem, etas):
 from sympy import pi, cos, sin
 
 if __name__ == "__main__":
-    dim = 2
+    dim = 1
     node_count = (dim + 2) ** 2
     triangle_count = 2 * (dim + 1) ** 2
 
     fem = FEM(dim)
     x, y = symbols("x y")
 
-    # f = -8*pi*sin(2*pi*x)*sin(2*pi*y)
+    f = -8*pi*sin(2*pi*x)*sin(2*pi*y)
 
-    # A_n = []
-    # b_n = []
-    # for n in range(triangle_count):
-    #     print(n)
-    #     A_n.append(build_element_stiffness(fem, n))
-    #     b_n.append(build_elemental_b(fem, n, f))
+    # print("HAPPY!")
+    # print(build_elemental_b(fem, 0, f))
+    # exit()
 
-    # A = np.zeros((node_count, node_count))
-    # b = np.zeros((node_count, 1))
+    A_n = []
+    b_n = []
+    for n in range(triangle_count):
+        print(n)
+        A_n.append(build_element_stiffness(fem, n))
+        b_n.append(build_elemental_b(fem, n, f))
 
-    # for n in range(triangle_count):
-    #     print(n)
-    #     for alpha in range(3):
-    #         for beta in range(3):
-    #             A[fem.T(alpha+1, n)][fem.T(beta+1, n)] += A_n[n][alpha][beta]
-    #         b[fem.T(alpha+1, n)][0] += b_n[n][alpha]
+    A = np.zeros((node_count, node_count))
+    b = np.zeros((node_count, 1))
 
-    # etas = np.linalg.solve(A, b)
+    for n in range(triangle_count):
+        print(n)
+        for alpha in range(3):
+            for beta in range(3):
+                A[fem.T(alpha+1, n)][fem.T(beta+1, n)] += A_n[n][alpha][beta]
+            b[fem.T(alpha+1, n)][0] += b_n[n][alpha]
 
-    # A_internal = build_internal_A(A, dim)
-    # b_internal = build_internal_b(b, dim)
+    etas = np.linalg.solve(A, b)
 
-    # etas_internal = np.linalg.solve(A_internal, b_internal)
+    A_internal = build_internal_A(A, dim)
+    b_internal = build_internal_b(b, dim)
 
-    # ws = []
-    # for n in range(triangle_count):
-    #     w = fem.w(n, etas)
-    #     if w != 0:
-    #         ws.append(w)
+    etas_internal = np.linalg.solve(A_internal, b_internal)
 
-    render(fem, [])
+    ws = []
+    for n in range(triangle_count):
+        w = fem.w(n, etas)
+        if w != 0:
+            ws.append(w)
+
+    render(fem, etas)
