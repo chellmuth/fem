@@ -124,9 +124,25 @@ class FEM(object):
             p, ps = n2, [n1, n3]
         elif alpha == 3:
             p, ps = n3, [n1, n2]
+        else:
+            raise Exception
 
         psi = build_linear_basis_function(p, ps)
         return psi
+
+    def domain(self, n):
+        t1 = self.T(1, n)
+        t2 = self.T(2, n)
+        t3 = self.T(3, n)
+
+        n1 = self.N(t1)
+        n2 = self.N(t2)
+        n3 = self.N(t3)
+
+        if n % 2 == 0:
+            return ((n1[0], n2[0]), (n1[1], n2[1]))
+        else:
+            return ((n1[0], n2[0]), (n1[1], n3[1]))
 
 import pytest
 
@@ -172,6 +188,18 @@ def test_psi():
 
     psi = fem.psi(2, 8)
     assert psi == -1 + x/h
+
+def test_domain():
+    fem = FEM(2)
+    h = symbols("h")
+
+    xs, ys = fem.domain(10)
+    assert xs == (2*h, 3*h)
+    assert ys == (h, 2*h)
+
+    xs, ys = fem.domain(13)
+    assert xs == (0, h)
+    assert ys == (2*h, 3*h)
 
 if __name__ == "__main__":
     render()
