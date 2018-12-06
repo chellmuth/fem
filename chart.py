@@ -130,6 +130,11 @@ class FEM(object):
         psi = build_linear_basis_function(p, ps)
         return psi
 
+    def gradient_psi(self, alpha, n):
+        psi = self.psi(alpha, n)
+        x, y = symbols("x y")
+        return (sympy.diff(psi, x), sympy.diff(psi, y))
+
     def domain(self, n):
         t1 = self.T(1, n)
         t2 = self.T(2, n)
@@ -150,8 +155,8 @@ def integrate(f, domain):
     x_domain, y_domain = domain
     result = sympy.integrate(
         f,
+        (y, y_domain[0], y_domain[1]),
         (x, x_domain[0], x_domain[1]),
-        (y, y_domain[0], y_domain[1])
     )
     return result
 
@@ -164,6 +169,24 @@ def build_elemental_b(fem, n, f):
         )
     return b
 
+def build_element_stiffness(fem, n):
+    A = [
+        [ 0, 0, 0 ],
+        [ 0, 0, 0 ],
+        [ 0, 0, 0 ],
+    ]
+
+    for alpha in range(3):
+        for beta in range(3):
+            alpha_gradient = fem.gradient_psi(alpha + 1, n)
+            beta_gradient = fem.gradient_psi(beta + 1, n)
+            A[alpha][beta] = integrate(
+                alpha_gradient[0] * beta_gradient[0] + \
+                alpha_gradient[1] * beta_gradient[1],
+                fem.domain(n)
+            )
+
+    return A
 
 import pytest
 
@@ -232,4 +255,32 @@ def test_elemental_b():
     # assert b == [ h**2 / 2, h**2 / 2, -h**2 / 2 ]
 
 if __name__ == "__main__":
-    render()
+    dim = 1
+    node_count = (dim + 2) ** 2
+    triangle_count = 2 * (dim + 1) ** 2
+
+    fem = FEM(dim)
+    x, h = symbols("x h")
+    f = sympy.cos(x) + 1
+
+    A_n = []
+    b_n = []
+    for n in range(triangle_count):
+        A_n.append(build_element_stiffness(fem, n))
+        b_n.append(build_elemental_b(fem, n, f))
+
+    A = np.zeros((node_count, node_count))
+    b = np.zeros((node_count, 1))
+
+    for n in range(triangle_count):
+        for alpha in range(3):
+            for beta in range(3):
+                A[fem.T(alpha+1, n)][fem.T(beta+1, n)] += A_n[n][alpha][beta]
+            b[fem.T(alpha+1, n)][0] += b_n[n][alpha].subs(h, fem.h)
+
+    print (A)
+    print (b)
+    etas = np.linalg.solve(A, b)
+    print(etas)
+
+    # render()
